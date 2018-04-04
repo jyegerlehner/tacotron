@@ -20,6 +20,13 @@ hparams = tf.contrib.training.HParams(
   # Model:
   # TODO: add more configurable hparams
   outputs_per_step=5,
+  embed_depth=256,
+  prenet_depth1=256,
+  prenet_depth2=128,
+  encoder_depth=256,
+  postnet_depth=256,
+  attention_depth=256,
+  decoder_depth=256,
 
   # Training:
   batch_size=32,
@@ -33,6 +40,7 @@ hparams = tf.contrib.training.HParams(
   max_iters=200,
   griffin_lim_iters=60,
   power=1.5,              # Power to raise magnitudes to prior to Griffin-Lim
+
 )
 
 
