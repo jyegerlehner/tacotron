@@ -22,7 +22,7 @@ def encoder_cbhg(inputs, input_lengths, is_training, h_params):
     scope='encoder_cbhg',
     K=16,
     projections=[128, input_channels],
-    depth=h_params.encoder_depth)
+    depth=h_params.encoder_depth, bidi_rnn=False)
 
 
 def post_cbhg(inputs, input_dim, is_training, h_params):
@@ -33,10 +33,10 @@ def post_cbhg(inputs, input_dim, is_training, h_params):
     scope='post_cbhg',
     K=8,
     projections=[256, input_dim],
-    depth=h_params.postnet_depth)
+    depth=h_params.postnet_depth, bidi_rnn=False)
 
 
-def cbhg(inputs, input_lengths, is_training, scope, K, projections, depth):
+def cbhg(inputs, input_lengths, is_training, scope, K, projections, depth, bidi_rnn=True):
   with tf.variable_scope(scope):
     with tf.variable_scope('conv_bank'):
       # Convolution bank: concatenate on the last axis to stack channels from all convolutions
@@ -59,8 +59,11 @@ def cbhg(inputs, input_lengths, is_training, scope, K, projections, depth):
     # Residual connection:
     highway_input = proj2_output + inputs
 
-    half_depth = depth // 2
-    assert half_depth*2 == depth, 'encoder and postnet depths must be even.'
+    if bidi_rnn:
+        half_depth = depth // 2
+        assert half_depth*2 == depth, 'encoder and postnet depths must be even.'
+    else:
+        half_depth = depth
 
     # Handle dimensionality mismatch:
     if highway_input.shape[2] != half_depth:
@@ -71,14 +74,17 @@ def cbhg(inputs, input_lengths, is_training, scope, K, projections, depth):
       highway_input = highwaynet(highway_input, 'highway_%d' % (i+1), half_depth)
     rnn_input = highway_input
 
-    # Bidirectional RNN
-    outputs, states = tf.nn.bidirectional_dynamic_rnn(
-      GRUCell(half_depth),
-      GRUCell(half_depth),
-      rnn_input,
-      sequence_length=input_lengths,
-      dtype=tf.float32)
-    return tf.concat(outputs, axis=2)  # Concat forward and backward
+    if bidi_rnn:
+        # Bidirectional RNN
+        outputs, states = tf.nn.bidirectional_dynamic_rnn(
+          GRUCell(half_depth),
+          GRUCell(half_depth),
+          rnn_input,
+          sequence_length=input_lengths,
+          dtype=tf.float32)
+        return tf.concat(outputs, axis=2)  # Concat forward and backward
+    else:
+        return highway_input
 
 
 def highwaynet(inputs, scope, depth):

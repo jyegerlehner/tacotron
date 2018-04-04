@@ -21,6 +21,7 @@ class DecoderPrenetWrapper(RNNCell):
     return self._cell.output_size
 
   def call(self, inputs, state):
+    print('Decoder prenet input shape:{}'.format(inputs.get_shape()))
     prenet_out = prenet(inputs, self._is_training, self._h_params,
                         scope='decoder_prenet')
     return self._cell(prenet_out, state)
