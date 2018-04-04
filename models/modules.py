@@ -60,6 +60,7 @@ def cbhg(inputs, input_lengths, is_training, scope, K, projections, depth):
     highway_input = proj2_output + inputs
 
     half_depth = depth / 2
+    assert half_depth*2 == depth, 'encoder and postnet depths must be even.'
 
     # Handle dimensionality mismatch:
     if highway_input.shape[2] != half_depth:
