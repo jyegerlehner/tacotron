@@ -1,18 +1,22 @@
 import tensorflow as tf
 from tensorflow.contrib.rnn import GRUCell, MultiRNNCell, OutputProjectionWrapper, ResidualWrapper
-from tensorflow.contrib.seq2seq import BasicDecoder, BahdanauAttention, AttentionWrapper
+from tensorflow.contrib.seq2seq import BasicDecoder, BahdanauAttention, AttentionWrapper, LuongAttention
 from text.symbols import symbols
 from util.infolog import log
 from .helpers import TacoTestHelper, TacoTrainingHelper
 from .modules import encoder_cbhg, post_cbhg, prenet
 from .rnn_wrappers import DecoderPrenetWrapper, ConcatOutputAndAttentionWrapper
 
+class ScaledSoftmax():
+  def __init__(self, key_dim):
+      self._scale = 1.0/tf.sqrt(tf.to_float(key_dim))
 
+  def __call__(self, score):
+      return tf.nn.softmax(score*self._scale)
 
 class Tacotron():
   def __init__(self, hparams):
     self._hparams = hparams
-
 
   def initialize(self, inputs, input_lengths, mel_targets=None, linear_targets=None):
     '''Initializes the model for inference.
@@ -50,7 +54,8 @@ class Tacotron():
       # Attention
       attention_cell = AttentionWrapper(
         DecoderPrenetWrapper(GRUCell(hp.attention_depth), is_training, hp),
-        BahdanauAttention(hp.attention_depth, encoder_outputs),
+        #BahdanauAttention(hp.attention_depth, encoder_outputs),
+        LuongAttention(hp.attention_depth, encoder_outputs, probability_fn=ScaledSoftmax(hp.attention_depth)),
         alignment_history=True,
         output_attention=False)                                                  # [N, T_in, attention_depth=256]
 
